@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Моніторинг Транзакцій Гаманця</title>
+    <title>Моніторинг Транзакцій Гаманців</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #121212;
             color: #e0e0e0;
             padding: 20px;
-            max-width: 900px;
+            max-width: 950px;
             margin: auto;
         }
         h1, h2 { color: #ffffff; }
@@ -21,41 +21,53 @@
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        .wallet-info {
-            font-size: 1.1em;
-            word-break: break-all;
-        }
-        .network-selector {
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
             margin-bottom: 15px;
+            align-items: center;
         }
         select, button {
-            padding: 10px;
+            padding: 10px 14px;
             background-color: #333;
             color: #fff;
             border: 1px solid #555;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 1em;
         }
         button:hover { background-color: #444; }
         ul { list-style-type: none; padding: 0; }
         li {
             background-color: #2a2a2a;
-            margin: 8px 0;
-            padding: 12px;
-            border-radius: 5px;
-            word-break: break-all;
+            margin: 10px 0;
+            padding: 12px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         a {
             color: #4da6ff;
             text-decoration: none;
             font-weight: bold;
+            word-break: break-all;
         }
         a:hover { text-decoration: underline; }
-        .status {
-            font-size: 0.85em;
-            color: #888;
-            margin-top: 5px;
+        .amount {
+            font-weight: bold;
+            font-size: 1.05em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
         }
+        .amount-in { color: #4caf50; background-color: rgba(76, 175, 80, 0.1); }
+        .amount-out { color: #f44336; background-color: rgba(244, 67, 54, 0.1); }
+        .wallet-info { font-size: 1.1em; word-break: break-all; }
+        .status { font-size: 0.85em; color: #888; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -63,62 +75,60 @@
     <h1>🔍 Монітор Блокчейн-Транзакцій</h1>
 
     <div class="card">
-        <div class="network-selector">
-            <label for="network">Оберіть мережу: </label>
-            <select id="network" onchange="loadTransactions()">
-                <option value="tron">TRON (TronScan)</option>
-                <option value="ethereum">Ethereum (Etherscan)</option>
-            </select>
+        <div class="controls">
+            <div>
+                <label for="wallet-select">Оберіть гаманець: </label>
+                <select id="wallet-select" onchange="loadTransactions()">
+                    <option value="TQV87TW3P8XN3h9WbjE99HCJMc9ZLeSyMT">TRON Гаманець 1 (TQV8...SyMT)</option>
+                    <option value="TJfc9oLUBM4P4iEioaARQVwaUMu6qiNx8a">TRON Гаманець 2 (TJfc...Nx8a)</option>
+                    <option value="TG1PjN7kR2bBUuKHtvwBWs8STaB28N5Hif">TRON Гаманець 3 (TG1P...5Hif)</option>
+                    <option value="0x6e8D7d12c3F0A9285981b8998CE7cF0CF0Bce78e">Ethereum Гаманець (0x6e...e78e)</option>
+                </select>
+            </div>
             <button onclick="loadTransactions()">Оновити 🔄</button>
         </div>
 
         <div class="wallet-info">
-            <strong>Закріплений гаманець:</strong> 
-            <span id="wallet-address">Завантаження...</span>
+            <strong>Активний гаманець:</strong> 
+            <span id="wallet-address">-</span>
         </div>
-        <div class="status" id="auto-refresh-status">Автооновлення кожні 30 секунд ⏱️</div>
+        <div class="status">Автооновлення кожні 30 секунд ⏱️</div>
     </div>
 
     <div class="card">
-        <h2>Останні транзакції (Посиланням):</h2>
-        <div id="loading">Завантаження транзакцій...</div>
+        <h2>Останні транзакції:</h2>
+        <div id="loading">Завантаження...</div>
         <ul id="tx-list"></ul>
     </div>
 
     <script>
-        // ⚙️ Закріплений гаманець TRON та заповнювач для Ethereum
-        const WALLETS = {
-            tron: "TQV87TW3P8XN3h9WbjE99HCJMc9ZLeSyMT", 
-            ethereum: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-        };
-
         async function loadTransactions() {
-            const network = document.getElementById('network').value;
-            const address = WALLETS[network];
+            const address = document.getElementById('wallet-select').value;
             const txList = document.getElementById('tx-list');
             const loading = document.getElementById('loading');
             
             document.getElementById('wallet-address').innerText = address;
             txList.innerHTML = '';
-            loading.innerText = 'Оновлення даних...';
+            loading.innerText = 'Завантаження даних...';
             loading.style.display = 'block';
 
             try {
-                if (network === 'tron') {
+                if (address.startsWith('T')) {
                     await fetchTronTx(address);
-                } else if (network === 'ethereum') {
+                } else {
                     await fetchEthTx(address);
                 }
             } catch (error) {
-                loading.innerText = 'Помилка завантаження даних з API.';
+                loading.innerText = 'Помилка при завантаженні транзакцій.';
                 console.error(error);
             }
         }
 
         async function fetchTronTx(address) {
-            const response = await fetch(`https://apilist.tronscan.org/api/transaction?sort=-timestamp&limit=15&start=0&address=${address}`);
+            const response = await fetch(`https://apilist.tronscan.org/api/token_trc20/transfers?limit=15&start=0&relatedAddress=${address}`);
             const data = await response.json();
-            const txs = data.data;
+            let txs = data.token_transfers;
+
             const txList = document.getElementById('tx-list');
             const loading = document.getElementById('loading');
 
@@ -128,10 +138,29 @@
             }
 
             loading.style.display = 'none';
+
             txs.forEach(tx => {
                 const li = document.createElement('li');
-                const fullUrl = `https://tronscan.org/#/transaction/${tx.hash}`;
-                li.innerHTML = `🔗 <a href="${fullUrl}" target="_blank">${fullUrl}</a>`;
+                const isIncoming = tx.to_address.toLowerCase() === address.toLowerCase();
+                
+                const decimals = tx.tokenInfo.tokenDecimal || 6;
+                const rawAmount = parseFloat(tx.quant) / Math.pow(10, decimals);
+                const formattedAmount = rawAmount.toLocaleString('en-US', { maximumFractionDigits: 2 });
+                
+                const symbol = tx.tokenInfo.tokenAbbr.toUpperCase();
+                const fullUrl = `https://tronscan.org/#/transaction/${tx.transaction_id}`;
+
+                const amountClass = isIncoming ? 'amount-in' : 'amount-out';
+                const prefix = isIncoming ? '+' : '-';
+
+                li.innerHTML = `
+                    <div>
+                        🔗 <a href="${fullUrl}" target="_blank">${fullUrl}</a>
+                    </div>
+                    <div class="amount ${amountClass}">
+                        ${prefix}${formattedAmount} ${symbol}
+                    </div>
+                `;
                 txList.appendChild(li);
             });
         }
@@ -150,18 +179,26 @@
             }
 
             loading.style.display = 'none';
+
             calls.forEach(call => {
                 const li = document.createElement('li');
                 const fullUrl = `https://etherscan.io/tx/${call.transaction_hash}`;
-                li.innerHTML = `🔗 <a href="${fullUrl}" target="_blank">${fullUrl}</a>`;
+                const amountEth = (call.value / 1e18).toFixed(4);
+
+                li.innerHTML = `
+                    <div>
+                        🔗 <a href="${fullUrl}" target="_blank">${fullUrl}</a>
+                    </div>
+                    <div class="amount">
+                        ${amountEth} ETH
+                    </div>
+                `;
                 txList.appendChild(li);
             });
         }
 
-        // Запуск при завантаженні сторінки
         window.onload = () => {
             loadTransactions();
-            // Автоматичне оновлення кожні 30 секунд
             setInterval(loadTransactions, 30000);
         };
     </script>
