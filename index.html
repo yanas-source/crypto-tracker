@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Моніторинг Транзакцій Гаманця</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+        h1, h2 { color: #ffffff; }
+        .card {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .wallet-info {
+            font-size: 1.1em;
+            word-break: break-all;
+        }
+        .network-selector {
+            margin-bottom: 15px;
+        }
+        select, button {
+            padding: 10px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #444; }
+        ul { list-style-type: none; padding: 0; }
+        li {
+            background-color: #2a2a2a;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+        }
+        a {
+            color: #4da6ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover { text-decoration: underline; }
+        .tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+        .tag-in { background-color: #2e7d32; color: #fff; }
+        .tag-out { background-color: #c62828; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h1>🔍 Монітор Блокчейн-Транзакцій</h1>
+
+    <div class="card">
+        <div class="network-selector">
+            <label for="network">Оберіть мережу: </label>
+            <select id="network" onchange="loadTransactions()">
+                <option value="tron">TRON (TronScan)</option>
+                <option value="ethereum">Ethereum (Etherscan)</option>
+            </select>
+            <button onclick="loadTransactions()">Оновити 🔄</button>
+        </div>
+
+        <div class="wallet-info">
+            <strong>Закріплений гаманець:</strong> 
+            <span id="wallet-address">-</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Останні транзакції (Посиланням):</h2>
+        <div id="loading">Завантаження...</div>
+        <ul id="tx-list"></ul>
+    </div>
+
+    <script>
+        // ⚙️ НАЛАШТУВАННЯ: Вкажіть ваші гаманці тут
+        TQV87TW3P8XN3h9WbjE99HCJMc9ZLeSyMT = {
+            tron: "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb", // Замініть на ваш TRON гаманець
+            ethereum: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" // Замініть на ваш ETH гаманець
+        };
+
+        async function loadTransactions() {
+            const network = document.getElementById('network').value;
+            const address = WALLETS[network];
+            const txList = document.getElementById('tx-list');
+            const loading = document.getElementById('loading');
+            
+            document.getElementById('wallet-address').innerText = address;
+            txList.innerHTML = '';
+            loading.style.display = 'block';
+
+            try {
+                if (network === 'tron') {
+                    await fetchTronTx(address);
+                } else if (network === 'ethereum') {
+                    await fetchEthTx(address);
+                }
+            } catch (error) {
+                loading.innerText = 'Помилка при завантаженні транзакцій.';
+                console.error(error);
+            } finally {
+                if (txList.children.length > 0) {
+                    loading.style.display = 'none';
+                }
+            }
+        }
+
+        // Отримання транзакцій TRON через TronScan API
+        async function fetchTronTx(address) {
+            const response = await fetch(`https://apilist.tronscan.org/api/transaction?sort=-timestamp&limit=10&start=0&address=${address}`);
+            const data = await response.json();
+            const txs = data.data;
+
+            const txList = document.getElementById('tx-list');
+            
+            txs.forEach(tx => {
+                const li = document.createElement('li');
+                const isIncoming = tx.toAddress.toLowerCase() === address.toLowerCase();
+                const tag = isIncoming 
+                    ? '<span class="tag tag-in">ВХІДНА</span>' 
+                    : '<span class="tag tag-out">ВИХІДНА</span>';
+                
+                // Формування повного посилання на TronScan
+                const fullUrl = `https://tronscan.org/#/transaction/${tx.hash}`;
+
+                li.innerHTML = `
+                    <div>
+                        ${tag}
+                        <a href="${fullUrl}" target="_blank" rel="noopener noreferrer">${fullUrl}</a>
+                    </div>
+                `;
+                txList.appendChild(li);
+            });
+        }
+
+        // Отримання транзакцій Ethereum через публічний API Blockchair (не вимагає ключів)
+        async function fetchEthTx(address) {
+            const response = await fetch(`https://api.blockchair.com/ethereum/dashboards/address/${address}?limit=10`);
+            const data = await response.json();
+            const txHashes = data.data[address.toLowerCase()].calls;
+
+            const txList = document.getElementById('tx-list');
+
+            txHashes.forEach(call => {
+                const li = document.createElement('li');
+                
+                // Формування повного посилання на Etherscan
+                const fullUrl = `https://etherscan.io/tx/${call.transaction_hash}`;
+
+                li.innerHTML = `
+                    <div>
+                        <a href="${fullUrl}" target="_blank" rel="noopener noreferrer">${fullUrl}</a>
+                    </div>
+                `;
+                txList.appendChild(li);
+            });
+        }
+
+        // Автозапуск при завантаженні сторінки
+        loadTransactions();
+    </script>
+</body>
+</html>
